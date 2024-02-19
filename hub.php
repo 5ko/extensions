@@ -137,10 +137,16 @@ function extCaller() {
   $dir = $xHub['ExtDir'];
   $trace = debug_backtrace();
   for($i=1; $i<count($trace); $i++) {
-    $fname = $trace[$i]['file'];
+    $path = $trace[$i]['file'];
+    $xname = basename($path, '.php');
     
-    if(!preg_match("!^(?:phar://)?$dir/(?:[^./]+\\.zip/)?([^/]+?)(?:-(?:latest|master|main))?/\\1\\.php$!", $fname, $m)) continue;
-    return $m[1];
+    if(!preg_match("!^(phar://)?     # ? compressed
+      $dir/                          # /extensions path
+      ($xname(-\\w[-\\w]*)?\\.zip/)? # ? compressed name
+      $xname(-\\w[-\\w]*)?/          # directory
+      $xname\\.php$                  # script
+      !x", $path, $m)) continue;
+    return $xname;
   }
   return false;
 }
