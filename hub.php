@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-02-19a';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-02-19b';
 SDVA($FmtPV, [
   '$xHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -140,11 +140,11 @@ function extCaller() {
     $path = $trace[$i]['file'];
     $xname = basename($path, '.php');
     
-    if(!preg_match("!^(phar://)?     # ? compressed
-      $dir/                          # /extensions path
-      ($xname(-\\w[-\\w]*)?\\.zip/)? # ? compressed name
-      $xname(-\\w[-\\w]*)?/          # directory
-      $xname\\.php$                  # script
+    if(!preg_match("!^(phar://)?      # ? compressed
+      $dir/                           # /extensions path
+      ($xname(-\\w[-\\w.]*)?\\.zip/)? # ? compressed name
+      $xname(-\\w[-\\w.]*)?/          # directory
+      $xname\\.php$                   # script
       !x", $path, $m)) continue;
     return $xname;
   }
