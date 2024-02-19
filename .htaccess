@@ -1,0 +1,13 @@
+# Disable download of PmWiki extensions
+<Files "*.zip">
+  <IfModule !mod_authz_host.c>
+    Order Deny,Allow
+    Deny from all
+  </IfModule>
+  <IfModule mod_authz_host.c>
+    Require all denied
+  </IfModule>
+</Files>
+
+
+
