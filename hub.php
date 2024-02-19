@@ -11,8 +11,10 @@
 */
 
 $RecipeInfo['ExtensionHub']['Version'] = '2024-02-19a';
-$FmtPV['$xHubVersion'] = '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]';
-$FmtPV['$ExtPubDirUrl'] = 'extFarmPubDirUrl()';
+SDVA($FmtPV, [
+  '$xHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
+  '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
+]);
 
 SDVA($HandleActions, ['hub'=>'HandleHub']);
 SDVA($HandleAuth,    ['hub' => 'admin']);
@@ -123,7 +125,6 @@ $extInc = extInit();
 foreach($extInc as $path=>$priority) {
   include_once($path);
 }
-
 
 function extFarmPubDirUrl() {
   global $FarmPubDirUrl, $PubDirUrl;
@@ -485,7 +486,7 @@ function extSaveConfig($pagename, $xname, $index) {
 function HandleHub($pagename, $auth='admin') {
   global $xHub, $FmtPV, $WikiLibDirs, $PageStartFmt, $PageEndFmt,
     $EnableExtDeleted, $EnableExtSaved, $EnableExtConfig, $EnableExtPgCust, 
-    $InputValues, $HTMLStylesFmt;
+    $InputValues, $HTMLStylesFmt, $CurrentExtension;
     
   $HTMLStylesFmt['hub-form'] = '.wikiexthub input:checked + label { font-weight: bold;}';
     
@@ -505,9 +506,11 @@ function HandleHub($pagename, $auth='admin') {
     if(@$_REQUEST['saved']) $EnableExtSaved = 1;
     
     $EnableExtConfig = 1;
-    $FmtPV['$xName'] = "'$xname'";
+    
+    $CurrentExtension = $xname;
+    $FmtPV['$xName'] = '$GLOBALS["CurrentExtension"]';
     $FmtPV['$xIndex'] = $index;
-    $FmtPV['$xVersion'] = "extGetVersion('$xname')";
+    $FmtPV['$xVersion'] = 'extGetVersion($GLOBALS["CurrentExtension"])';
     
     $extconf = extGetConfig(['mode' => 'full', 'xname'=>$xname]);
     
