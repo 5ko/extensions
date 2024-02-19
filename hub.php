@@ -8,16 +8,11 @@
   as published by the Free Software Foundation; either version 3
   of the License, or (at your option) any later version.
   See pmwiki.php for full details and lack of warranty.
-
-
-  Some day: 
-  - Output CSS before JS
-  - UI to translate strings into other languages
-  - InterMap to extpubdirurl/recipe
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-02-19';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-02-19a';
 $FmtPV['$xHubVersion'] = '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]';
+$FmtPV['$ExtPubDirUrl'] = 'extFarmPubDirUrl()';
 
 SDVA($HandleActions, ['hub'=>'HandleHub']);
 SDVA($HandleAuth,    ['hub' => 'admin']);
@@ -28,8 +23,7 @@ SDVA($PostConfig, [
   'extOutputResources' => 300.5,
 ]);
 
-SDVA($xHub, [ 
-  'PubDirUrl' => preg_replace('#/[^/]*$#', '/extensions', $PubDirUrl, 1),
+SDVA($xHub, [
   'ExtDir' => dirname(__FILE__),
   'DataDir' => "$WorkDir/.extensions",
   'DataPageName' => "Extensions.Config",
@@ -38,7 +32,7 @@ SDVA($xHub, [
   'ResourcesSent'=>0,
 ]);
 
-if(!isset($xHub['Template'])) 
+if(!isset($xHub['Template']))
   $xHub['Template'] = <<<'TEMPLATE'
 markup:(:messages:)
 (:Summary: Cookbook:ExtensionHub Template used when listing extensions and editing configurations:)
@@ -130,6 +124,13 @@ foreach($extInc as $path=>$priority) {
   include_once($path);
 }
 
+
+function extFarmPubDirUrl() {
+  global $FarmPubDirUrl, $PubDirUrl;
+  $pub = $FarmPubDirUrl ?? $PubDirUrl;
+  return preg_replace('#/[^/]*$#', '/extensions', $pub, 1);
+}
+
 function extCaller() {
   global $xHub;
   $dir = $xHub['ExtDir'];
@@ -142,8 +143,6 @@ function extCaller() {
   }
   return false;
 }
-
-# extGetConfig
 
 function extAddWikiLibDir($path = 'wikilib.d') {
   global $WikiLibDirs;
@@ -187,10 +186,9 @@ function extOutputResources() {
     $css = $js = $raw = [];
     
     foreach($xHub['Resources'][$f] as $xname=>$a) {
-      # a $HTMLHeaderFmt[extname] defined in config.php 
+      # a $HTMLHeaderFmt[$xname] defined in config.php 
       # overrides the one suggested by the recipe.
       if(isset($fmt[$xname])) continue;
-      
       
       $out = '';
       foreach($a as $x) {
@@ -201,17 +199,13 @@ function extOutputResources() {
       unset($xHub['Resources'][$f][$xname]);
     }
   }
-  
   $xHub['ResourcesSent']++;
 }
-
 
 function extFormatResource($xname, $a, $htmlattr) {
   global $xHub;
   
-  $active = extGetConfig('active');
-//   xmp(['extFormatResource', $xname, $active]);
-  
+  $active = extGetConfig('active');  
   $out = '';
   if(is_array($a)) foreach($a as $v) 
     $out .= extFormatResource($xname, $v, $htmlattr);
@@ -273,16 +267,15 @@ function extScanDir() {
       $list[$xname] = "$dir/$fname/$xname.php";
     }
   }
-  
   $xHub['ExtPaths'] = $list;
 }
 
 function extGetConfig($args = ['mode'=> 'extension']) { 
   # Can be called:
-    # initially to populate the full static array
-    # to populate extGetIncluded
-    # to get extension configuration - full or merged
-    # to get configuration for ?action=hub (list, form, or save)
+  # - initially to populate the full static array
+  # - to populate extGetIncluded
+  # - to get extension configuration - full or merged
+  # - to get configuration for ?action=hub (list, form, or save)
   
   global $xHub;
   
@@ -316,7 +309,7 @@ function extGetConfig($args = ['mode'=> 'extension']) {
           'xAction'=>$actions, 
           '=path' => $xpath,
           '=dir' => dirname($xpath),
-          '=url' => "{$xHub['PubDirUrl']}$serve/$extdir",
+          '=url' => "{\$ExtPubDirUrl}$serve/$extdir",
           '=conf' => [],
         ];
         continue;
@@ -330,7 +323,7 @@ function extGetConfig($args = ['mode'=> 'extension']) {
         ];
         continue;
       }
-      # count($parts)==3
+      # else count($parts)==3
       
       if(substr($xkey, -1) == '~') {
         $xkey =  substr($xkey, 0, -1);
@@ -364,12 +357,9 @@ function extGetConfig($args = ['mode'=> 'extension']) {
     $Active = array_merge($Active, $args['new']);
   }
   
-  
   if($mode == 'active') {
     return $Active;
   }
-  
-  
 }
 
 function extSort($a, $b) {
@@ -396,7 +386,6 @@ function extGetIncluded($pagename = '') { # ''=initial
       
     }
     elseif($pagename !== '' && $conf['xPriority']>100) {
-      
       foreach($conf['=conf'] as $a) {
         if (!$a['xEnabled']) continue;
         $pat = $a['xNamePatterns'];
@@ -409,7 +398,6 @@ function extGetIncluded($pagename = '') { # ''=initial
           $merged[$xname] = array_merge($x[$xname], $a);
         }
       }
-      
     }
   }
   extGetConfig(['mode'=>'put', 'new'=>$merged]);
@@ -424,14 +412,11 @@ function extInit() {
   
   $xHub["ConfigStore"] = new PageStore("{$xHub['DataDir']}/{\$FullName}");
   
-  
   extScanDir();
-//   extGetConfig();
   
   if($action == 'recipecheck') {
     FmtExtList('', '', ['onlyRecipeInfo'=>1]);
   }
-  
   return extGetIncluded('');
 }
 
@@ -509,9 +494,7 @@ function HandleHub($pagename, $auth='admin') {
   
   $paths = $xHub['ExtPaths'];
   
-  
   $index = intval(@$_REQUEST['i']);
-  
   $xname = @$_REQUEST['x'];
   
   if(@$_REQUEST['deleted']) $EnableExtDeleted = 1;
@@ -589,11 +572,9 @@ function FmtExtList($pagename, $d, $args) {
     return $out;
   }
   
-  
   $out  = "|| class='simpletable sortable filterable' \n";
   $out .= "||! $[Extension] ||! $[Version] ||! $[Priority] "
     . "||! $[Actions] ||! $[Configurations] ||\n";
-  
   
   foreach($paths as $xname=>$path) {
     $version = extGetVersion($xname);
