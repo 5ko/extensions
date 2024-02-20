@@ -10,9 +10,9 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-02-19b';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-02-20';
 SDVA($FmtPV, [
-  '$xHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
+  '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
 ]);
 
@@ -49,16 +49,16 @@ $[Configuration deleted.] $[Return to] [[{*$FullName}|+]]
 
 (:if20240205end:)
 (:if20240205 enabled EnableExtConfig:)
-!! {*$xName} configuration
-(:if202402051 exists Site.{*$xName}Form:)
-(:include Site.{*$xName}Form##form:)
+!! {*$ExtName} configuration
+(:if202402051 exists Site.{*$ExtName}Form:)
+(:include Site.{*$ExtName}Form##form:)
 (:else202402051:)
 >>frame<<
-Cookbook:{*$xName}
+Cookbook:{*$ExtName}
 >><<
 (:if202402051end:)
 
-(:input form "{*$PageUrl}?action=hub&x={*$xName}&i={*$xIndex}" method=post:)
+(:input form "{*$PageUrl}?action=hub&x={*$ExtName}&i={*$ExtIndex}" method=post:)
 (:input default request=1:)
 (:input default xNameList *:)
 (:input hidden n {*$FullName}:)
@@ -81,8 +81,8 @@ $[Applies to pages:]\\
 (:input hidden xName *:)
 (:if202402052end:)
 
-(:if202402051 exists Site.{*$xName}Form:)
-(:include Site.{*$xName}Form#form#formend:)
+(:if202402051 exists Site.{*$ExtName}Form:)
+(:include Site.{*$ExtName}Form#form#formend:)
 
 ''Leave fields empty to reset to default values.''
 
@@ -94,12 +94,12 @@ $[Applies to pages:]\\
 (:input end:)
 
 
-(:include Site.{*$xName}Form#formend:)
+(:include Site.{*$ExtName}Form#formend:)
 
 (:else20240205:)
 >>recipeinfo frame<<
 $[Summary]: Configuration panel for PmWiki extensions \\
-$[Version]: {$xHubVersion}\\
+$[Version]: {$ExtHubVersion}\\
 $[Maintainer]: [[https://www.pmwiki.org/petko|Petko]]\\
 $[Cookbook]: [[(Cookbook:)ExtensionHub]]
 >><<
@@ -120,30 +120,32 @@ SDVA($xHub['injectFmt'], [
 
 SDVA($MarkupDirectiveFunctions, ['extlist'=>'FmtExtList']);
 
-
 $extInc = extInit();
 foreach($extInc as $path=>$priority) {
   include_once($path);
 }
+unset($extInc, $path, $priority);
 
 function extFarmPubDirUrl() {
-  global $FarmPubDirUrl, $PubDirUrl;
+  global $ExtPubDirUrl, $FarmPubDirUrl, $PubDirUrl, $xHub;
+  if(isset($ExtPubDirUrl)) return $ExtPubDirUrl;
+  $extbasedir = basename($xHub['ExtDir']);
   $pub = $FarmPubDirUrl ?? $PubDirUrl;
-  return preg_replace('#/[^/]*$#', '/extensions', $pub, 1);
+  return preg_replace('#/[^/]*$#', "/$extbasedir", $pub, 1);
 }
 
 function extCaller() {
   global $xHub;
-  $dir = $xHub['ExtDir'];
+  $extbasedir = $xHub['ExtDir'];
   $trace = debug_backtrace();
   for($i=1; $i<count($trace); $i++) {
     $path = $trace[$i]['file'];
     $xname = basename($path, '.php');
     
     if(!preg_match("!^(phar://)?      # ? compressed
-      $dir/                           # /extensions path
+      $extbasedir/                    # /extensions path
       ($xname(-\\w[-\\w.]*)?\\.zip/)? # ? compressed name
-      $xname(-\\w[-\\w.]*)?/          # directory
+      $xname(-\\w[-\\w.]*)?/          # extension own directory
       $xname\\.php$                   # script
       !x", $path, $m)) continue;
     return $xname;
@@ -494,10 +496,10 @@ function HandleHub($pagename, $auth='admin') {
     $EnableExtDeleted, $EnableExtSaved, $EnableExtConfig, $EnableExtPgCust, 
     $InputValues, $HTMLStylesFmt, $CurrentExtension;
     
-  $HTMLStylesFmt['hub-form'] = '.wikiexthub input:checked + label { font-weight: bold;}';
-    
   $page = RetrieveAuthPage($pagename, $auth, true, READPAGE_CURRENT);
   if(!$page) return Abort('?No permissions');
+  
+  $HTMLStylesFmt['hub-form'] = '.wikiexthub input:checked + label { font-weight: bold;}';
   
   $paths = $xHub['ExtPaths'];
   
@@ -514,9 +516,9 @@ function HandleHub($pagename, $auth='admin') {
     $EnableExtConfig = 1;
     
     $CurrentExtension = $xname;
-    $FmtPV['$xName'] = '$GLOBALS["CurrentExtension"]';
-    $FmtPV['$xIndex'] = $index;
-    $FmtPV['$xVersion'] = 'extGetVersion($GLOBALS["CurrentExtension"])';
+    $FmtPV['$ExtName'] = '$GLOBALS["CurrentExtension"]';
+    $FmtPV['$ExtIndex'] = $index;
+    $FmtPV['$ExtVersion'] = 'extGetVersion($GLOBALS["CurrentExtension"])';
     
     $extconf = extGetConfig(['mode' => 'full', 'xname'=>$xname]);
     
