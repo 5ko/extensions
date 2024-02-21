@@ -598,10 +598,12 @@ function extGetVersion($xname) {
 }
 
 function FmtExtList($pagename, $d, $args) {
-  global $xHub, $RecipeInfo;
+  global $HandleAuth, $xHub, $RecipeInfo;
+  $page = RetrieveAuthPage($pagename, $HandleAuth['hub'], false, READPAGE_CURRENT);
+  if(!$page) return '$[No permissions]';
+
   $paths = $xHub['ExtPaths'];
   ksort($paths);
-
   if(!count($paths)) {
     $out = "$[No extensions currently available.]";
     return $out;
