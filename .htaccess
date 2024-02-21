@@ -1,5 +1,5 @@
 # Disable directory listing
-Options -Indexes
+IndexIgnore *
 
 # Disable download of PmWiki extensions
 <Files "*.zip">
