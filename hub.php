@@ -140,7 +140,6 @@ class HubPageStore extends PageStore {
     $this->pagetime = strtotime($date) + 12*3600;
   }
   function read($pagename, $since=0) {
-    global ;
     if(!isset($this->pagetexts[$pagename])) return [];
     list($g, $n) = explode('.', $pagename);
     $page = [
