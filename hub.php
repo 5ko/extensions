@@ -168,6 +168,31 @@ class HubPageStore extends PageStore {
   }
 }
 
+# Read plain text files (PmWiki source text) as pages.
+# These are easier to review from version control
+class HubPlainPageStore extends PageStore {
+  function read($pagename, $since=0) {
+    $pagefile = $this->pagefile($pagename);
+    if(!$pagefile || !file_exists($pagefile)) return false;
+    
+    $page = $this->attr;
+    $page['time'] = filemtime($pagefile);
+    $page['text'] = file_get_contents($pagefile);
+    return $page;
+  }
+  function write($pagename,$page) {
+    Abort('?Not supported.');
+  }
+  function exists($pagename) {
+    $pagefile = $this->pagefile($pagename);
+    return file_exists($pagefile);
+  }
+  function delete($pagename) {
+    Abort('?Not supported.');
+  }
+}
+
+
 $extInc = extInit();
 foreach($extInc as $path=>$priority) {
   include_once($path);
@@ -214,6 +239,20 @@ function extCaller() {
   return false;
 }
 
+function extAddWikiPlainDir($path = 'wikiplain.d') {
+  global $WikiLibDirs;
+  $xname = extCaller();
+  if(!$xname) return; # abort?
+  $active = extGetConfig('active');
+  $c = @$active[$xname];
+  if(!$c) return;
+  $dir = @$c['=dir'];
+  if(!$dir) return;
+
+  $path = "$dir/$path/{\$FullName}";
+  $WikiLibDirs[$path] = new HubPlainPageStore($path);
+}
+
 function extAddWikiLibDir($path = 'wikilib.d') {
   global $WikiLibDirs;
   $xname = extCaller();
@@ -224,8 +263,8 @@ function extAddWikiLibDir($path = 'wikilib.d') {
   $dir = @$c['=dir'];
   if(!$dir) return;
 
-  $path = "$dir/$path";
-  $WikiLibDirs[$path] = $path;
+  $path = "$dir/$path/\$FullName";
+  $WikiLibDirs[$path] = new PageStore($path);
 }
 
 function extAddResource($files, $attrs=[], $footer=0) {
@@ -571,9 +610,12 @@ function HandleHub($pagename, $auth='admin') {
 
     $EnableExtPgCust = $priority <= 100? 0:1;
 
-    $wlpath = preg_replace('!/[^/]+$!', '', $paths[$xname]) . "/wikilib.d";
-    if($xname!='PmX' && file_exists($wlpath)) {
-      $WikiLibDirs[] = new PageStore("$wlpath/{\$FullName}");
+    $wlpath = preg_replace('!/[^/]+$!', '', $paths[$xname]);
+    if(file_exists("$wlpath/wikiplain.d")) {
+      $WikiLibDirs[] = new HubPlainPageStore("$wlpath/wikiplain.d/{\$FullName}");
+    }
+    elseif(file_exists("$wlpath/wikilib.d")) {
+      $WikiLibDirs[] = new PageStore("$wlpath/wikilib.d/{\$FullName}");
     }
   }
   HandleBrowse($pagename);
