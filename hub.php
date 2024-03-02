@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-02-21';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-03-02';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -112,7 +112,9 @@ $[Cookbook]: [[(Cookbook:)ExtensionHub]]
 
 $[Here you can enable and configure your PmWiki extensions.]
 
+>>padding=.5em<<
 (:extlist:)
+>><<
 
 $[See Cookbook:Extensions to find new extensions.]
 
@@ -243,7 +245,7 @@ function extAddWikiPlainDir($path = 'wikiplain.d') {
   global $WikiLibDirs;
   $xname = extCaller();
   if(!$xname) return; # abort?
-  $active = extGetConfig('active');
+  $active = extHubGetConfig('active');
   $c = @$active[$xname];
   if(!$c) return;
   $dir = @$c['=dir'];
@@ -257,7 +259,7 @@ function extAddWikiLibDir($path = 'wikilib.d') {
   global $WikiLibDirs;
   $xname = extCaller();
   if(!$xname) return; # abort?
-  $active = extGetConfig('active');
+  $active = extHubGetConfig('active');
   $c = @$active[$xname];
   if(!$c) return;
   $dir = @$c['=dir'];
@@ -305,7 +307,7 @@ function extOutputResources() {
 function extFormatResource($xname, $a, $htmlattr) {
   global $xHub;
 
-  $active = extGetConfig('active');  
+  $active = extHubGetConfig('active');  
   $out = '';
   if(is_array($a)) foreach($a as $v) 
     $out .= extFormatResource($xname, $v, $htmlattr);
@@ -367,11 +369,18 @@ function extScanDir() {
   $xHub['ExtPaths'] = $list;
 }
 
-function extGetConfig($args = ['mode'=> 'extension']) { 
+# May be called from an extension, with default values to be merged
+function extGetConfig($default = []) {
+  $args = ['mode'=> 'extension'];
+  $conf = extHubGetConfig($args);
+  return array_merge($default, $conf);
+}
+
+function extHubGetConfig($args = ['mode'=> 'extension']) { 
   # Can be called:
   # - initially to populate the full static array
   # - to populate extGetIncluded
-  # - to get extension configuration - full or merged
+  # - to get extension configuration - full or merged per page
   # - to get configuration for ?action=hub (list, form, or save)
   global $xHub;
   static $Extensions = [], $Active = [], $page = [];
@@ -461,7 +470,7 @@ function extSort($a, $b) {
 function extGetIncluded($pagename = '') { # ''=initial
   global $PostConfig, $xHub, $action;
 
-  $x = extGetConfig('all');
+  $x = extHubGetConfig('all');
 
   $merged = $list = [];
 
@@ -490,7 +499,7 @@ function extGetIncluded($pagename = '') { # ''=initial
       }
     }
   }
-  extGetConfig(['mode'=>'put', 'new'=>$merged]);
+  extHubGetConfig(['mode'=>'put', 'new'=>$merged]);
   asort($list);
   asort($PostConfig); # required
   return $list;
@@ -517,7 +526,7 @@ function extSaveConfig($pagename, $xname, $index) {
   $patterns = strval($_POST['xNamePatterns']);
   if($patterns === '') $patterns = '*';
 
-  $page = $old = extGetConfig('page');
+  $page = $old = extHubGetConfig('page');
 
   if(@$_POST['xReset']) {
     $kpat = "/^x\\.$xname\\.$index($|\\.)/";
@@ -587,7 +596,7 @@ function HandleHub($pagename, $auth='admin') {
     $FmtPV['$ExtIndex'] = $index;
     $FmtPV['$ExtVersion'] = 'extGetVersion($GLOBALS["CurrentExtension"])';
 
-    $extconf = extGetConfig(['mode' => 'full', 'xname'=>$xname]);
+    $extconf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
 
     $currentconf = $extconf['=conf'][$index] ?? [];
 
@@ -662,7 +671,7 @@ function FmtExtList($pagename, $d, $args) {
       continue;
     }
 
-    $conf = extGetConfig(['mode' => 'full', 'xname'=>$xname]);
+    $conf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
     $compressed = (strncmp('phar://', $path, 7)===0)? '*' : '';
 
     $select = "(:input form '{*\$PageUrl}' get:)";
