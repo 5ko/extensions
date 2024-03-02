@@ -349,7 +349,7 @@ function extScanDir() {
   $dirlist = scandir($dir);
 
   # Extension downloaded from repository may have its tag as suffix
-  $suffix = '/-(master|main|latest|v?\\d\\d\\d\\d-?\\d\\d-?\\d\\d|v?\\d+(\\.\\d+)*)$/';
+  $suffix = '/-(master|main|latest|v?\\d\\d\\d\\d-?\\d\\d-?\\d\\d[a-z]?|v?\\d+(\\.\\d+)*)$/';
 
   foreach($dirlist as $fname) {
     if($fname[0] == '.') continue;
