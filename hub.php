@@ -575,10 +575,7 @@ function HandleHub($pagename, $auth='admin') {
   $page = RetrieveAuthPage($pagename, $auth, true, READPAGE_CURRENT);
   if(!$page) return Abort('?No permissions');
 
-  $HTMLStylesFmt['hub-form'] = '
-    .wikiexthub input:checked + label { font-weight: bold;}
-    form.hublistform select  { width: 12em; text-overflow: ellipsis; }
-    ';
+  $HTMLStylesFmt['hub-form'] = '.wikiexthub input:checked + label { font-weight: bold;}';
 
   $paths = $xHub['ExtPaths'];
 
@@ -652,10 +649,11 @@ function extGetVersion($xname) {
 }
 
 function FmtExtList($pagename, $d, $args) {
-  global $HandleAuth, $xHub, $RecipeInfo;
+  global $HandleAuth, $xHub, $RecipeInfo, $HTMLStylesFmt;
   $page = RetrieveAuthPage($pagename, $HandleAuth['hub'], false, READPAGE_CURRENT);
   if(!$page) return '$[No permissions]';
 
+  
   $paths = $xHub['ExtPaths'];
   ksort($paths);
   if(!count($paths)) {
@@ -663,6 +661,9 @@ function FmtExtList($pagename, $d, $args) {
     return $out;
   }
 
+  $HTMLStylesFmt['hublist-form'] = 'form.hublistform select  { width: 12em; text-overflow: ellipsis; }';
+  
+  
   $out  = "|| class='simpletable sortable filterable' \n";
   $out .= "||! $[Extension] ||! $[Version] ||! $[Priority] "
     . "||! $[Actions] ||! $[Configurations] ||\n";
