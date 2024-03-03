@@ -575,7 +575,10 @@ function HandleHub($pagename, $auth='admin') {
   $page = RetrieveAuthPage($pagename, $auth, true, READPAGE_CURRENT);
   if(!$page) return Abort('?No permissions');
 
-  $HTMLStylesFmt['hub-form'] = '.wikiexthub input:checked + label { font-weight: bold;}';
+  $HTMLStylesFmt['hub-form'] = '
+    .wikiexthub input:checked + label { font-weight: bold;}
+    form.hublistform select  { width: 12em; text-overflow: ellipsis; }
+    ';
 
   $paths = $xHub['ExtPaths'];
 
@@ -674,7 +677,7 @@ function FmtExtList($pagename, $d, $args) {
     $conf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
     $compressed = (strncmp('phar://', $path, 7)===0)? '*' : '';
 
-    $select = "(:input form '{*\$PageUrl}' get:)";
+    $select = "(:input form '{*\$PageUrl}' get class=hublistform:)";
     $select .= "(:input hidden n $pagename:)(:input hidden action hub:)";
     $select .= "(:input hidden x $xname:)";
     $j=0;
