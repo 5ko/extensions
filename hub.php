@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-03-02';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-04-10';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -267,6 +267,14 @@ function extAddWikiLibDir($path = 'wikilib.d') {
 
   $path = "$dir/$path/\$FullName";
   $WikiLibDirs[$path] = new PageStore($path);
+}
+
+function extAddHeaderResource($files, $attrs=[]) {
+  return extAddResource($files, $attrs, 0);
+}
+
+function extAddFooterResource($files, $attrs=[]) {
+  return extAddResource($files, $attrs, 1);
 }
 
 function extAddResource($files, $attrs=[], $footer=0) {
