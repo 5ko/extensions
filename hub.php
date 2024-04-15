@@ -203,13 +203,13 @@ unset($extInc, $path, $priority);
 
 
 function extInit() {
-  global $xHub, $action, $WikiLibDirs;
+  global $xHub, $action, $WikiLibDirs, $PostConfig;
   static $done = 0; if($done++) return [];
   $WikiLibDirs[] = new HubPageStore();
   $xHub["ConfigStore"] = new PageStore("{$xHub['DataDir']}/{\$FullName}");
   extScanDir();
   if($action == 'recipecheck') {
-    FmtExtList('', '', ['onlyRecipeInfo'=>1]);
+    $PostConfig['extRecipeCheck'] = 0.4;
   }
   return extGetIncluded('');
 }
@@ -656,6 +656,10 @@ function extGetVersion($xname) {
   return $version;
 }
 
+# Populate extension versions for ?action=recipecheck
+function extRecipeCheck(){
+  FmtExtList('', '', ['onlyRecipeInfo'=>1]);
+}
 function FmtExtList($pagename, $d, $args) {
   global $HandleAuth, $xHub, $RecipeInfo, $HTMLStylesFmt;
   $page = RetrieveAuthPage($pagename, $HandleAuth['hub'], false, READPAGE_CURRENT);
