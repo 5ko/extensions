@@ -224,19 +224,17 @@ function extFarmPubDirUrl() {
 
 function extCaller() {
   global $xHub;
-  $extbasedir = $xHub['ExtDir'];
-  $quotedbasedir = preg_quote($extbasedir, '!');
-  $qs = preg_quote(DIRECTORY_SEPARATOR, '!');
+  $extbasedir = preg_quote(strtr($xHub['ExtDir'], '\\', '/'));
   $trace = debug_backtrace();
   for($i=1; $i<count($trace); $i++) {
-    $path = $trace[$i]['file'];
+    $path = strtr($trace[$i]['file'], '\\', '/');
     $xname = basename($path, '.php');
     $qname = preg_quote($xname, '!');
-    $rx = "!^(phar://)?                   # ? compressed
-      $quotedbasedir    $qs               # /extensions path
-      ($qname(-\\w[-\\w.]*)?\\.zip $qs )? # ? compressed name
-      $qname(-\\w[-\\w.]*)?  $qs          # extension own directory
-      $qname\\.php$                       # script
+    $rx = "!^(phar://)?                 # ? compressed
+      $extbasedir /                     # /extensions path
+      ($qname(-\\w[-\\w.]*)?\\.zip / )? # ? compressed name
+      $qname(-\\w[-\\w.]*)? /           # extension own directory
+      $qname\\.php$                     # script
       !x";
     if(!preg_match($rx, $path, $m)) continue;
     return $xname;
@@ -647,6 +645,7 @@ function extGetVersion($xname) {
   static $versions = [];
   if(isset($versions[$xname])) return $versions[$xname];
   $path = $xHub['ExtPaths'][$xname];
+  if(!file_exists($path)) return '0000-00-00'; # not extension
   $f = file_get_contents($path);
   if(preg_match('!\\$RecipeInfo\\[.*?\\]\\[.*?\\] *= *([\'"])(.+?)\\1!', $f, $m)) {
     $version = $m[2];
