@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-04-20';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-04-20a';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -226,18 +226,19 @@ function extCaller() {
   global $xHub;
   $extbasedir = $xHub['ExtDir'];
   $quotedbasedir = preg_quote($extbasedir, '!');
+  $qs = preg_quote(DIRECTORY_SEPARATOR, '!');
   $trace = debug_backtrace();
   for($i=1; $i<count($trace); $i++) {
     $path = $trace[$i]['file'];
     $xname = basename($path, '.php');
     $qname = preg_quote($xname, '!');
-
-    if(!preg_match("!^(phar://)?      # ? compressed
-      $quotedbasedir/                 # /extensions path
-      ($qname(-\\w[-\\w.]*)?\\.zip/)? # ? compressed name
-      $qname(-\\w[-\\w.]*)?/          # extension own directory
-      $qname\\.php$                   # script
-      !x", $path, $m)) continue;
+    $rx = "!^(phar://)?                   # ? compressed
+      $quotedbasedir    $qs               # /extensions path
+      ($qname(-\\w[-\\w.]*)?\\.zip $qs )? # ? compressed name
+      $qname(-\\w[-\\w.]*)?  $qs          # extension own directory
+      $qname\\.php$                       # script
+      !x";
+    if(!preg_match($rx, $path, $m)) continue;
     return $xname;
   }
   return false;
