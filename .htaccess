@@ -1,15 +1,39 @@
 # Disable directory listing
 IndexIgnore *
 
-# Disable download of PmWiki extensions
-<Files "*.zip">
-  <IfModule !mod_authz_host.c>
-    Order Deny,Allow
-    Deny from all
-  </IfModule>
-  <IfModule mod_authz_host.c>
-    Require all denied
-  </IfModule>
-</Files>
+# Forbid download of compressed extensions and
+# direct access to extension scripts and wiki pages
+# Allow access to hub.php in the current directory
+<IfModule !mod_authz_host.c>
+  Order Deny,Allow
 
+  <FilesMatch "^.*\.([pP][hH][pP]|[zZ][iI][pP])$">
+    Deny from all
+  </FilesMatch>
+
+  <If "%{REQUEST_URI} =~ m!wiki(lib|plain)\.d!">
+    Deny from all
+  </If>
+
+  <Files "hub.php">
+    Allow from all
+  </Files>
+
+</IfModule>
+
+<IfModule mod_authz_host.c>
+
+  <FilesMatch "^.*\.([pP][hH][pP]|[zZ][iI][pP])$">
+    Require all denied
+  </FilesMatch>
+
+  <If "%{REQUEST_URI} =~ m!wiki(lib|plain)\.d!">
+    Require all denied
+  </If>
+
+  <Files "hub.php">
+    Require all granted
+  </Files>
+
+</IfModule>
 
