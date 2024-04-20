@@ -225,16 +225,18 @@ function extFarmPubDirUrl() {
 function extCaller() {
   global $xHub;
   $extbasedir = $xHub['ExtDir'];
+  $quotedbasedir = preg_quote($extbasedir, '!');
   $trace = debug_backtrace();
   for($i=1; $i<count($trace); $i++) {
     $path = $trace[$i]['file'];
     $xname = basename($path, '.php');
+    $qname = preg_quote($xname, '!');
 
     if(!preg_match("!^(phar://)?      # ? compressed
-      $extbasedir/                    # /extensions path
-      ($xname(-\\w[-\\w.]*)?\\.zip/)? # ? compressed name
-      $xname(-\\w[-\\w.]*)?/          # extension own directory
-      $xname\\.php$                   # script
+      $quotedbasedir/                 # /extensions path
+      ($qname(-\\w[-\\w.]*)?\\.zip/)? # ? compressed name
+      $qname(-\\w[-\\w.]*)?/          # extension own directory
+      $qname\\.php$                   # script
       !x", $path, $m)) continue;
     return $xname;
   }
