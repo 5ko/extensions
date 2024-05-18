@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-04-20a';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-05-18';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -32,6 +32,8 @@ SDVA($xHub, [
   'Resources'=>[ [], [] ], # header, footer
   'ResourcesSeen'=>[],
   'ResourcesSent'=>0,
+  'EncodeFn' => 'base64_encode',
+  'DecodeFn' => 'base64_decode',
 ]);
 
 if(!isset($xHub['Pages']['{$SiteAdminGroup}.ExtensionHub']))
@@ -105,9 +107,10 @@ $[Applies to pages:]\\
 (:else20240205:)
 >>recipeinfo frame<<
 $[Summary]: Configuration panel for PmWiki extensions \\
+%hlt php%@@$ExtPubDirUrl@@: {$ExtPubDirUrl}\\
 $[Version]: {$ExtHubVersion}\\
-$[Maintainer]: [[https://www.pmwiki.org/petko|Petko]]\\
-$[Cookbook]: [[(Cookbook:)ExtensionHub]]
+$[Cookbook]: [[(Cookbook:)ExtensionHub]]\\
+$[Maintainer]: [[https://www.pmwiki.org/petko|Petko]]
 >><<
 
 $[Here you can enable and configure your PmWiki extensions.]
@@ -409,6 +412,8 @@ function extHubGetConfig($args = ['mode'=> 'extension']) {
       @list($xname, $index, $xkey) = $parts;
       $xpath = @$list[$xname];
       if(!$xpath) continue;
+      
+      
 
       if(count($parts)==1) {
         list($priority, $actions) = explode(' ', $value, 2);
@@ -434,6 +439,11 @@ function extHubGetConfig($args = ['mode'=> 'extension']) {
         continue;
       }
       # else count($parts)==3
+      
+      if(preg_match('/^(enc_|passwd)/', $xkey)) {
+        $cfn = $xHub['DecodeFn'];
+        $value = $cfn($value);
+      }
 
       if(substr($xkey, -1) == '~') {
         $xkey =  substr($xkey, 0, -1);
@@ -521,9 +531,10 @@ function extSaveConfig($pagename, $xname, $index) {
     $MessagesFmt[] = XL('Token invalid or missing');
     return;
   }
-
-  $keys = preg_grep('/^(n|action|pmtoken|i|x|x[A-Z]\\w*)$/', array_keys($_POST), PREG_GREP_INVERT);
-
+  
+  $kpat = '/^(n|action|pmtoken|i|x|x[A-Z]\\w*|.*[^a-zA-Z0-9_].*)$/';
+  $keys = preg_grep($kpat, array_keys($_POST), PREG_GREP_INVERT);
+  
   $priority = intval(@$_POST['xPriority']);
   if(!$priority) $priority = 150;
 
@@ -561,7 +572,13 @@ function extSaveConfig($pagename, $xname, $index) {
       $xkey = "$prefix.$index.$k";
 
       if($v === '') unset($page[$xkey]);
-      else $page[$xkey] = $v;
+      else {
+        if(preg_match('/^(enc_|passwd)/', $k)) {
+          $cfn = $xHub['EncodeFn'];
+          $v = $cfn($v);
+        }
+        $page[$xkey] = $v;
+      }
     }
   }
 
