@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-05-18';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-05-30';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -533,7 +533,7 @@ function extSaveConfig($pagename, $xname, $index) {
   }
   
   $kpat = '/^(n|action|pmtoken|i|x|x[A-Z]\\w*|.*[^a-zA-Z0-9_].*)$/';
-  $keys = preg_grep($kpat, array_keys($_POST), PREG_GREP_INVERT);
+  $postedkeys = preg_grep($kpat, array_keys($_POST), PREG_GREP_INVERT);
   
   $priority = intval(@$_POST['xPriority']);
   if(!$priority) $priority = 150;
@@ -548,21 +548,21 @@ function extSaveConfig($pagename, $xname, $index) {
 
   $page = $old = extHubGetConfig('page');
 
-  if(@$_POST['xReset']) {
-    $kpat = "/^x\\.$xname\\.$index($|\\.)/";
-    $deletedkeys = preg_grep($kpat, array_keys($page));
+  $dpat = "/^x\\.$xname\\.$index($|\\.)/";
+  $deletedkeys = preg_grep($dpat, array_keys($page));
 
-    foreach($deletedkeys as $key) {
-      unset($page[$key]);
-    }
+  foreach($deletedkeys as $key) {
+    unset($page[$key]);
   }
-  else {
+  
+  if(! @$_POST['xReset']) {
     $prefix = "x.$xname";
 
     $page[$prefix] = "$priority $xaction";
     $page["$prefix.$index"] = "$enabled $patterns";
+    
 
-    foreach($keys as $k) {
+    foreach($postedkeys as $k) {
       $v = $_POST[$k];
       if(is_numeric($v)) $v = floatval($v);
       elseif(is_array($v)) {
