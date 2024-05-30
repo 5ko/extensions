@@ -82,7 +82,7 @@ Cookbook:{*$ExtName}
 (:ifend:)
 
 $[Applies to pages:]\\
-(:input text xNamePatterns placeholder=* list=xNameList required=required:) \\
+(:input text xNamePatterns placeholder=* list=xNameList required=required size=40:) \\
 ''$[Glob patterns like @@Group1.*,Group2.*,-*.HomePage@@]''
 
 (:else202402052:)
