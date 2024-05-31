@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-05-30';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-05-31';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -32,9 +32,17 @@ SDVA($xHub, [
   'Resources'=>[ [], [] ], # header, footer
   'ResourcesSeen'=>[],
   'ResourcesSent'=>0,
+  '=included'=>[],
+  'StatusIcons'=>[
+    'new' => '&#128993;',      # yellow circle
+    'active' => '&#128994;',   # green circle
+    'inactive' => '&#128308;', # red circle
+  ],
   'EncodeFn' => 'base64_encode',
   'DecodeFn' => 'base64_decode',
 ]);
+
+$Conditions['extension_enabled'] = 'CondExtEnabled($condparm)';
 
 if(!isset($xHub['Pages']['{$SiteAdminGroup}.ExtensionHub']))
   $xHub['Pages']['{$SiteAdminGroup}.ExtensionHub'] = <<<'TEMPLATE'
@@ -204,6 +212,17 @@ foreach($extInc as $path=>$priority) {
 }
 unset($extInc, $path, $priority);
 
+function CondExtEnabled($condparm) {
+  global $xHub, $action;
+  if(!$condparm) {
+    if($action == 'hub') {
+      $condparm = $_REQUEST['x'];
+    }
+    else return false;
+  }
+  $enabled = array_keys($xHub['=included']);
+  return (boolean)MatchNames($enabled, $condparm);
+}
 
 function extInit() {
   global $xHub, $action, $WikiLibDirs, $PostConfig;
@@ -501,7 +520,7 @@ function extGetIncluded($pagename = '') { # ''=initial
       if(!isset($my) || !$my['xEnabled']!=1)
       $list[ $conf['=path'] ] = $conf['xPriority'];
       $merged[$xname] = @array_merge($x[$xname], (array)$conf['=conf'][0]);
-
+      $xHub['=included'][$xname] = 1;
     }
     elseif($pagename !== '' && $conf['xPriority']>100) {
       foreach($conf['=conf'] as $a) {
@@ -514,6 +533,7 @@ function extGetIncluded($pagename = '') { # ''=initial
 
           $PostConfig[ $conf['=path'] ] = $priority;
           $merged[$xname] = array_merge($x[$xname], $a);
+          $xHub['=included'][$xname] = 1;
         }
       }
     }
@@ -623,11 +643,12 @@ function HandleHub($pagename, $auth='admin') {
     $FmtPV['$ExtVersion'] = 'extGetVersion($GLOBALS["CurrentExtension"])';
 
     $extconf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
+    
 
     $currentconf = $extconf['=conf'][$index] ?? [];
 
     if(!$index && !$currentconf) $currentconf['xNamePatterns'] = '*';
-
+    
     foreach($currentconf as $k => $v) {
       if(isset($_POST[$k])) continue;
       if (is_array($v)) {
@@ -698,7 +719,9 @@ function FmtExtList($pagename, $d, $args) {
   $out  = "|| class='simpletable sortable filterable' \n";
   $out .= "||! $[Extension] ||! $[Version] ||! $[Priority] "
     . "||! $[Actions] ||! $[Configurations] ||\n";
-
+  
+  $keepz = Keep('');
+  
   foreach($paths as $xname=>$path) {
     $version = extGetVersion($xname);
     if(@$args['onlyRecipeInfo']) {
@@ -714,16 +737,17 @@ function FmtExtList($pagename, $d, $args) {
     $select .= "(:input hidden x $xname:)";
     $j=0;
     foreach($conf['=conf'] as $i=>$a) {
-      # circle emojis: green=&#128994 white=&#9898; red=&#128308;;
-      $icon = $a['xEnabled']? "&#128994;" : "&#9898;";
+      $icon = $a['xEnabled']
+        ? $xHub['StatusIcons']['active']
+        : $xHub['StatusIcons']['inactive'];
 
       $select .= "(:input select i $i \"$icon {$a['xNamePatterns']}\":)";
       $j = $i+1;
     }
     if(!isset($conf['xPriority']) || $conf['xPriority']>100 || !$j)
-      $select .= "(:input select i $j \"&#9898; $[New configuration]\":)";
+      $select .= "(:input select i $j \"{$xHub['StatusIcons']['new']} $[New configuration]\":)";
 
-    $select .= "[==] (:input submit '' \"$[Edit]\":)";
+    $select .= "$keepz (:input submit '' \"$[Edit]\":)";
     $select .= "(:input end:)";
 
     $out .= @"||'''$xname'''$compressed || $version || {$conf['xPriority']} "
