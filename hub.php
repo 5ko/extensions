@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-08-13';
+$RecipeInfo['ExtensionHub']['Version'] = '2024-08-13a';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -516,7 +516,7 @@ function extGetIncluded($pagename = '') { # ''=initial
     elseif($pagename !== '' && $conf['xPriority']>100) {
       foreach($conf['=conf'] as $a) {
         if (!$a['xEnabled']) continue;
-        $pat = $a['xNamePatterns'];
+        $pat = preg_replace('/[,\\s]+/', ',', $a['xNamePatterns']);
         if($pat === '*' || $pat === '*.*' || MatchNames($pagename, $pat)) {
           $priority = $conf['xPriority']<=200
             ? 1+$conf['xPriority']/100
@@ -736,7 +736,7 @@ function FmtExtList($pagename, $d, $args) {
         ? $xHub['StatusIcons']['active']
         : $xHub['StatusIcons']['inactive'];
 
-      $np = preg_replace('!\\s+!', ' ', $a['xNamePatterns']);
+      $np = preg_replace('/[,\\s]+/', ',', $a['xNamePatterns']);
       $select .= "(:input select i $i \"$icon $np\":)";
       $j = $i+1;
     }
