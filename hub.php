@@ -70,7 +70,6 @@ Cookbook:{*$ExtName}
 
 (:input form "{*$PageUrl}?action=hub&x={*$ExtName}&i={*$ExtIndex}" method=post:)
 (:input default request=1:)
-(:input default xNameList *:)
 (:input hidden n {*$FullName}:)
 (:input hidden action hub:)
 (:input pmtoken:)
@@ -79,18 +78,8 @@ Cookbook:{*$ExtName}
 (:input checkbox xEnabled 1 "$[Enable configuration]":)
 
 (:if202402052 enabled EnableExtPgCust:)
-(:pagelist list=grouphomes fmt=#globlist:)
-(:if false:)
-[[#globlist]]
-(:template first:)
-(:input datalist xNameList *:)
-(:template each:)
-(:input datalist xNameList {=$Group}.*:)
-[[#globlistend]]
-(:ifend:)
-
 $[Applies to pages:]\\
-(:input text xNamePatterns placeholder=* list=xNameList required=required size=40:) \\
+(:input textarea xNamePatterns placeholder=* required=required cols=60 rows={*$NamePatternsRows}:) \\
 ''$[Glob patterns like @@Group1.*,Group2.*,-*.HomePage@@]''
 
 (:else202402052:)
@@ -404,6 +393,8 @@ function extScanDir() {
 function extGetConfig($default = []) {
   $args = ['mode'=> 'extension'];
   $conf = extHubGetConfig($args);
+  $x = explode(' ', '=conf =path xAction xEnabled xNamePatterns xPriority');
+  foreach($x as $k) unset($conf[$k]);
   return array_merge($default, $conf);
 }
 
@@ -439,8 +430,8 @@ function extHubGetConfig($args = ['mode'=> 'extension']) {
         $serve = (strncmp($xpath, 'phar://', 7)===0) ? '/' . basename(__FILE__): '';
         $extdir = basename(dirname($xpath)); // may have -tag suffix
         $x[$xname] = [
-          'xPriority'=>intval($priority), 
-          'xAction'=>$actions, 
+          'xPriority'=>intval($priority),
+          'xAction'=>$actions,
           '=path' => $xpath,
           '=dir' => dirname($xpath),
           '=url' => "{\$ExtPubDirUrl}$serve/$extdir",
@@ -649,6 +640,9 @@ function HandleHub($pagename, $auth='admin') {
 
     if(!$index && !$currentconf) $currentconf['xNamePatterns'] = '*';
     
+    $nplines = explode("\n", trim(strval(@$currentconf['xNamePatterns'])));
+    $FmtPV['$NamePatternsRows'] = min(4, count($nplines)+1);
+    
     foreach($currentconf as $k => $v) {
       if(isset($_POST[$k])) continue;
       if (is_array($v)) {
@@ -665,6 +659,7 @@ function HandleHub($pagename, $auth='admin') {
     $priority = $extconf['xPriority'] ?? 150;
 
     $EnableExtPgCust = $priority <= 100? 0:1;
+    
 
     $wlpath = preg_replace('!/[^/]+$!', '', $paths[$xname]);
     if(file_exists("$wlpath/wikiplain.d")) {
@@ -741,7 +736,8 @@ function FmtExtList($pagename, $d, $args) {
         ? $xHub['StatusIcons']['active']
         : $xHub['StatusIcons']['inactive'];
 
-      $select .= "(:input select i $i \"$icon {$a['xNamePatterns']}\":)";
+      $np = preg_replace('!\\s+!', ' ', $a['xNamePatterns']);
+      $select .= "(:input select i $i \"$icon $np\":)";
       $j = $i+1;
     }
     if(!isset($conf['xPriority']) || $conf['xPriority']>100 || !$j)
