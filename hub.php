@@ -1,7 +1,7 @@
 <?php if (!defined('PmWiki')) { extServe(); exit();}
 /**
   ExtensionHub: Configuration panel for PmWiki recipes
-  Written by (c) Petko Yotov 2023-2024
+  Written by (c) Petko Yotov 2023-2025
 
   This text is written for PmWiki; you can redistribute it and/or
   modify it under the terms of the GNU General Public License
@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2024-08-13a';
+$RecipeInfo['ExtensionHub']['Version'] = '2025-11-08';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -37,6 +37,7 @@ SDVA($xHub, [
     'new' => '&#128993;',      # yellow circle
     'active' => '&#128994;',   # green circle
     'inactive' => '&#128308;', # red circle
+    'order' => '&#8645;',      # up-down arrows
   ],
   'EncodeFn' => 'base64_encode',
   'DecodeFn' => 'base64_decode',
@@ -133,9 +134,9 @@ class HubPageStore extends PageStore {
   private $pagetexts = [];
   private $pagetime = 0;
   function __construct() {
-    global $xHub, $RecipeInfo;
+    global $xHub, $RecipeInfo, $SiteAdminGroup;
     foreach($xHub['Pages'] as $pnfmt=>$text) {
-      $pn = FmtPageName($pnfmt, 'SiteAdmin.SiteAdmin');
+      $pn = FmtPageName($pnfmt, "$SiteAdminGroup.$SiteAdminGroup");
       $this->pagetexts[$pn] = $text;
     } 
     $date = substr($RecipeInfo['ExtensionHub']['Version'], 0, 10);
@@ -210,7 +211,7 @@ function CondExtEnabled($condparm) {
     else return false;
   }
   $enabled = array_keys($xHub['=included']);
-  return (boolean)MatchNames($enabled, $condparm);
+  return (bool)MatchNames($enabled, $condparm);
 }
 
 function extInit() {
@@ -621,6 +622,7 @@ function HandleHub($pagename, $auth='admin') {
 
   if(@$_REQUEST['deleted']) $EnableExtDeleted = 1;
 
+  
   if($xname && isset($paths[$xname])) {
     extSaveConfig($pagename, $xname, $index);
 
@@ -742,6 +744,8 @@ function FmtExtList($pagename, $d, $args) {
     }
     if(!isset($conf['xPriority']) || $conf['xPriority']>100 || !$j)
       $select .= "(:input select i $j \"{$xHub['StatusIcons']['new']} $[New configuration]\":)";
+    // if($j>1)
+      // $select .= "(:input select i '-1' \"{$xHub['StatusIcons']['order']} $[Order configurations]\":)";
 
     $select .= "$keepz (:input submit '' \"$[Edit]\":)";
     $select .= "(:input end:)";
@@ -765,6 +769,7 @@ function extServe() {
   $ExtRx = "/\\.(".implode('|', array_keys($ServeExts)).")$/i";
 
   $pi = strval(@$_SERVER['PATH_INFO']);
+  $pi = preg_replace('![/\\\\]+!', '/', $pi);
   $pi = preg_replace('!\\.+/+!', '/', $pi);
   $pi = preg_replace('!^/+|[^-\\w./]+!', '', $pi);
 
