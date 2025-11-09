@@ -550,11 +550,13 @@ function extSaveConfig($pagename, $xname, $index) {
   if(!$priority) $priority = 150;
 
   $xaction = $_POST['xAction'] ?? '*';
-
+  
+  $post = PPRAR(["/\r+/"=>''], $_POST);
+  
   $enabled = intval(@$_POST['xEnabled']);
   $_POST['xEnabled'] = $enabled;
 
-  $patterns = strval(@$_POST['xNamePatterns']);
+  $patterns = strval(@$post['xNamePatterns']);
   if($patterns === '') $patterns = '*';
 
   $page = $old = extHubGetConfig('page');
@@ -574,12 +576,12 @@ function extSaveConfig($pagename, $xname, $index) {
     unset($conf['=conf'][$index], $oldconf[$index]);
   }
   else {
-    $xver = $RecipeInfo[$xname]['Version'];
+    $xver = extGetVersion($xname);
     $hver = $RecipeInfo['ExtensionHub']['Version'];
     $confconf = ['=curr'=>1, '_xversions'=> "$hver $xver",
       'xEnabled'=>$enabled, 'xNamePatterns'=>$patterns];
     foreach($postedkeys as $k) {
-      $confconf[$k] = $_POST[$k];
+      $confconf[$k] = $post[$k];
     }
     $xMove = $_POST['xMove']??'';
     if($xMove==='') {
