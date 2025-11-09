@@ -704,7 +704,7 @@ function HandleHub($pagename, $auth='admin') {
       foreach($extconf['=conf'] as $k=>$a) {
         $last = $k;
         if($k==$index || $k == $index+1) continue;
-        $label = $a['xNamePatterns'];
+        $label = PHSC(preg_replace('/\\s+/', ' ', $a['xNamePatterns']));
         $select .= "(:input select xMove \"$k\" \"$mbefore $label\":)";
       }
       if($last != $index)
