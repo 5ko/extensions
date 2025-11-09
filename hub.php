@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2025-11-08';
+$RecipeInfo['ExtensionHub']['Version'] = '2025-11-09';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -37,10 +37,10 @@ SDVA($xHub, [
     'new' => '&#128993;',      # yellow circle
     'active' => '&#128994;',   # green circle
     'inactive' => '&#128308;', # red circle
-    'order' => '&#8645;',      # up-down arrows
   ],
   'EncodeFn' => 'base64_encode',
   'DecodeFn' => 'base64_decode',
+  'EnablePriority' => 1,
 ]);
 
 $Conditions['extension_enabled'] = 'CondExtEnabled($condparm)';
@@ -93,7 +93,7 @@ $[Applies to pages:]\\
 ''Leave fields empty to reset to default values.''
 
 (:if202402051end:)
-(:input submit xPost "$[Save]":) &nbsp; [[{*$FullName}| $[Cancel] ]]
+(:xmoveconfig:)(:input submit xPost "$[Save]":) &nbsp; [[{*$FullName}| $[Cancel] ]]
 
 (:input submit xReset "$[Delete configuration]" data-pmconfirm="$[Confirm deletion?]":)
 
@@ -423,8 +423,6 @@ function extHubGetConfig($args = ['mode'=> 'extension']) {
       @list($xname, $index, $xkey) = $parts;
       $xpath = @$list[$xname];
       if(!$xpath) continue;
-      
-      
 
       if(count($parts)==1) {
         list($priority, $actions) = explode(' ', $value, 2);
@@ -526,6 +524,7 @@ function extGetIncluded($pagename = '') { # ''=initial
           $PostConfig[ $conf['=path'] ] = $priority;
           $merged[$xname] = array_merge($x[$xname], $a);
           $xHub['=included'][$xname] = 1;
+          if($xHub['EnablePriority']) break;
         }
       }
     }
@@ -537,7 +536,7 @@ function extGetIncluded($pagename = '') { # ''=initial
 }
 
 function extSaveConfig($pagename, $xname, $index) {
-  global $xHub, $EnableExtSaved, $MessagesFmt;
+  global $xHub, $EnableExtSaved, $MessagesFmt, $RecipeInfo;
   if(!@$_POST['xPost'] && !@$_POST['xReset'] || !$xname) return;
   if(! pmtoken(1)) {
     $MessagesFmt[] = XL('Token invalid or missing');
@@ -555,54 +554,103 @@ function extSaveConfig($pagename, $xname, $index) {
   $enabled = intval(@$_POST['xEnabled']);
   $_POST['xEnabled'] = $enabled;
 
-  $patterns = strval($_POST['xNamePatterns']);
+  $patterns = strval(@$_POST['xNamePatterns']);
   if($patterns === '') $patterns = '*';
 
   $page = $old = extHubGetConfig('page');
-
-  $dpat = "/^x\\.$xname\\.$index($|\\.)/";
+  $conf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
+  
+  $dpat = "/^x\\.$xname\\.\\d+($|\\.)/";
   $deletedkeys = preg_grep($dpat, array_keys($page));
 
   foreach($deletedkeys as $key) {
     unset($page[$key]);
   }
   
-  if(! @$_POST['xReset']) {
-    $prefix = "x.$xname";
-
-    $page[$prefix] = "$priority $xaction";
-    $page["$prefix.$index"] = "$enabled $patterns";
-    
-
+  $prefix = "x.$xname";
+  $oldconf = $conf['=conf'];
+  $newidx = $index;
+  if(@$_POST['xReset']) {
+    unset($conf['=conf'][$index], $oldconf[$index]);
+  }
+  else {
+    $xver = $RecipeInfo[$xname]['Version'];
+    $hver = $RecipeInfo['ExtensionHub']['Version'];
+    $confconf = ['=curr'=>1, '_xversions'=> "$hver $xver",
+      'xEnabled'=>$enabled, 'xNamePatterns'=>$patterns];
     foreach($postedkeys as $k) {
-      $v = $_POST[$k];
-      if(is_numeric($v)) $v = floatval($v);
-      elseif(is_array($v)) {
-        $k .= "~";
-        $v = serialize($v);
+      $confconf[$k] = $_POST[$k];
+    }
+    $xMove = $_POST['xMove']??'';
+    if($xMove==='') {
+      $oldconf[$index] = $confconf;
+    }
+    else {
+      unset($oldconf[$index]);
+      
+      if($xMove=='end') {
+        $oldconf[] = $confconf;
       }
-      $xkey = "$prefix.$index.$k";
-
-      if($v === '') unset($page[$xkey]);
       else {
-        if(preg_match('/^(enc_|passwd)/', $k)) {
-          $cfn = $xHub['EncodeFn'];
-          $v = $cfn($v);
+        $xMove = intval($xMove);
+        $i=0; 
+        
+        $newconf = [];
+        foreach($oldconf as $k=>$a) {
+          if($k == $xMove) {
+            $newconf[] = $confconf;
+          }
+          $newconf[] = $a;
         }
-        $page[$xkey] = $v;
+        $oldconf = $newconf;
       }
     }
   }
+  $newconf = array_values($oldconf);
+  foreach($newconf as $k=>&$v) {
+    if(isset($v['=curr'])) {
+      unset($v['=curr']);
+      $newidx = $k;
+    }
+  }
+  
+  $prefix = "x.$xname";
 
-  if($page != $old) {
+  $page[$prefix] = "$priority $xaction";
+  
+  foreach($newconf as $i=>$a) {
+    $page["$prefix.$i"] = "{$a['xEnabled']} {$a['xNamePatterns']}";
+    foreach($a as $kk=>$vv) {
+      if(preg_match('/^x[A-Z]/', $kk)) continue;
+      list($pk, $pv) = extStringify($kk, $vv);
+      if($vv==='') continue;
+      $page["$prefix.$i.$pk"] = $pv;
+    }
+  }
+
+  if($page !== $old) {
+    $page['ExtHubVersion'] = $RecipeInfo['ExtensionHub']['Version'];
     $xHub['ConfigStore']->write($xHub['DataPageName'], $page);
-    Redirect($pagename, "{\$PageUrl}?action=hub&x=$xname&i=$index&saved=1");
   }
-
+  
   if(@$_POST['xReset']) {
-    Redirect($pagename, '{*$PageUrl}?deleted=1');
-    exit;
+    $rfmt = '{*$PageUrl}?deleted=1';
   }
+  else {
+    $rfmt = "{\$PageUrl}?action=hub&x=$xname&i=$newidx&saved=1";
+  }
+  Redirect($pagename, $rfmt);
+}
+
+function extStringify($k, $v) {
+  global $xHub;
+  if(is_numeric($v)) return [$k, floatval($v)];
+  if(is_array($v)) return ["$k~", serialize($v)];
+  if(preg_match('/^(enc_|passwd)/', $k)) {
+    $cfn = $xHub['EncodeFn'];
+    return [$k, $cfn($v)];
+  }
+  return [$k, strval($v)];
 }
 
 function HandleHub($pagename, $auth='admin') {
@@ -622,7 +670,6 @@ function HandleHub($pagename, $auth='admin') {
 
   if(@$_REQUEST['deleted']) $EnableExtDeleted = 1;
 
-  
   if($xname && isset($paths[$xname])) {
     extSaveConfig($pagename, $xname, $index);
 
@@ -637,10 +684,37 @@ function HandleHub($pagename, $auth='admin') {
 
     $extconf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
     
-
     $currentconf = $extconf['=conf'][$index] ?? [];
 
     if(!$index && !$currentconf) $currentconf['xNamePatterns'] = '*';
+    
+    if(count($extconf['=conf'])>1 && $xHub['EnablePriority']) {
+      $kco = XL("Keep current order");
+      $reorder = XL("Place the configuration:");
+      $mbefore = XL("Before");
+      $mend = XL("At the end");
+      $select = "$reorder<br>";
+      
+      if(isset($extconf['=conf'][$index]))
+        $select .= "(:input select xMove \"\" \"$kco\":)";
+      else $InputValues['xMove'] = 'end';
+      
+      foreach($extconf['=conf'] as $k=>$a) {
+        $last = $k;
+        if($k==$index || $k == $index+1) continue;
+        $label = $a['xNamePatterns'];
+        $select .= "(:input select xMove \"$k\" \"$mbefore $label\":)";
+      }
+      if($last != $index)
+        $select .= "(:input select xMove end \"$mend\":)";
+      
+      $select .= "<br><br>";
+      
+      Markup('xmvc', '<input-select', '/\\(:xmoveconfig:\\)/', $select);
+    }
+    else {
+      Markup('xmvc', '<input-select', '/\\(:xmoveconfig:\\)/', '');
+    }
     
     $nplines = explode("\n", trim(strval(@$currentconf['xNamePatterns'])));
     $FmtPV['$NamePatternsRows'] = min(4, count($nplines)+1);
@@ -661,7 +735,6 @@ function HandleHub($pagename, $auth='admin') {
     $priority = $extconf['xPriority'] ?? 150;
 
     $EnableExtPgCust = $priority <= 100? 0:1;
-    
 
     $wlpath = preg_replace('!/[^/]+$!', '', $paths[$xname]);
     if(file_exists("$wlpath/wikiplain.d")) {
@@ -697,12 +770,12 @@ function extGetVersion($xname) {
 function extRecipeCheck(){
   FmtExtList('', '', ['onlyRecipeInfo'=>1]);
 }
+
 function FmtExtList($pagename, $d, $args) {
   global $HandleAuth, $xHub, $RecipeInfo, $HTMLStylesFmt;
   $page = RetrieveAuthPage($pagename, $HandleAuth['hub'], false, READPAGE_CURRENT);
   if(!$page) return '$[No permissions]';
 
-  
   $paths = $xHub['ExtPaths'];
   ksort($paths);
   if(!count($paths)) {
@@ -711,8 +784,7 @@ function FmtExtList($pagename, $d, $args) {
   }
 
   $HTMLStylesFmt['hublist-form'] = 'form.hublistform select  { width: 12em; text-overflow: ellipsis; }';
-  
-  
+
   $out  = "|| class='simpletable sortable filterable' \n";
   $out .= "||! $[Extension] ||! $[Version] ||! $[Priority] "
     . "||! $[Actions] ||! $[Configurations] ||\n";
@@ -744,8 +816,6 @@ function FmtExtList($pagename, $d, $args) {
     }
     if(!isset($conf['xPriority']) || $conf['xPriority']>100 || !$j)
       $select .= "(:input select i $j \"{$xHub['StatusIcons']['new']} $[New configuration]\":)";
-    // if($j>1)
-      // $select .= "(:input select i '-1' \"{$xHub['StatusIcons']['order']} $[Order configurations]\":)";
 
     $select .= "$keepz (:input submit '' \"$[Edit]\":)";
     $select .= "(:input end:)";
