@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2025-11-16';
+$RecipeInfo['ExtensionHub']['Version'] = '2025-12-14';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -551,7 +551,7 @@ function extSaveConfig($pagename, $xname, $index) {
 
   $xaction = $_POST['xAction'] ?? '*';
   
-  $post = PPRA(["/\r+/"=>''], $_POST);
+  $post = PPRAR(["/\r+/"=>''], $_POST);
   
   $enabled = intval(@$_POST['xEnabled']);
   $_POST['xEnabled'] = $enabled;
@@ -771,6 +771,17 @@ function extGetVersion($xname) {
 # Populate extension versions for ?action=recipecheck
 function extRecipeCheck(){
   FmtExtList('', '', ['onlyRecipeInfo'=>1]);
+}
+
+if(!function_exists('PPRAR')) {
+  
+  function PPRAR($array, $x) { # Recursive PPRA
+    if(is_array($x)) {
+      foreach($x as $k=>$v) $y[$k] = PPRAR($array, $v);
+      return $y;
+    }
+    else return PPRA($array, $x);
+  }
 }
 
 function FmtExtList($pagename, $d, $args) {
