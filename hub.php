@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2025-12-14';
+$RecipeInfo['ExtensionHub']['Version'] = '2026-10-10';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -349,7 +349,8 @@ function extFormatResource($xname, $a, $htmlattr) {
     if(strpos($a, ':') === false && $a[0] !== '/') {
       $conf = $active[$xname];
       $url = $conf['=url'];
-      $a = "$url/$a";
+      $xver = extGetVersion($xname);
+      $a = "$url/$a?v=$xver";
       if(isset($xHub['ResourcesSeen'][$a])) return $out;
     }
     if(preg_match('/\\.(css|js)(?:[?#].+)?$/i', $a, $m)) {
@@ -371,6 +372,9 @@ function extScanDir() {
 
   # Extension downloaded from repository may have its tag as suffix
   $suffix = '/-(master|main|latest|v?\\d\\d\\d\\d-?\\d\\d-?\\d\\d[a-z]?|v?\\d+(\\.\\d+)*)$/';
+
+  usort($dirlist, 'version_compare');
+  $dirlist = array_reverse($dirlist);
 
   foreach($dirlist as $fname) {
     if($fname[0] == '.') continue;
@@ -755,7 +759,9 @@ function extGetVersion($xname) {
   static $versions = [];
   if(isset($versions[$xname])) return $versions[$xname];
   $path = $xHub['ExtPaths'][$xname];
-  if(!file_exists($path)) return '0000-00-00'; # not extension
+  if(!file_exists($path)) {
+    return '0000-00-00'; # not extension, or no permissions
+  }
   $f = file_get_contents($path);
   if(preg_match('!\\$RecipeInfo\\[.*?\\]\\[.*?\\] *= *([\'"])(.+?)\\1!', $f, $m)) {
     $version = $m[2];
@@ -803,7 +809,6 @@ function FmtExtList($pagename, $d, $args) {
     . "||! $[Actions] ||! $[Configurations] ||\n";
   
   $keepz = Keep('');
-  
   foreach($paths as $xname=>$path) {
     $version = extGetVersion($xname);
     if(@$args['onlyRecipeInfo']) {
@@ -855,7 +860,8 @@ function extServe() {
   $pi = preg_replace('![/\\\\]+!', '/', $pi);
   $pi = preg_replace('!\\.+/+!', '/', $pi);
   $pi = preg_replace('!^/+|[^-\\w./]+!', '', $pi);
-
+  $pi = preg_replace('!\\?v=.*$!', '', $pi);
+  
   if(! $pi) {
     extReject("Bad request");
   }
