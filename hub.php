@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2026-10-10';
+$RecipeInfo['ExtensionHub']['Version'] = '2026-10-13';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -809,6 +809,7 @@ function FmtExtList($pagename, $d, $args) {
     . "||! $[Actions] ||! $[Configurations] ||\n";
   
   $keepz = Keep('');
+  $compressed_count = 0;
   foreach($paths as $xname=>$path) {
     $version = extGetVersion($xname);
     if(@$args['onlyRecipeInfo']) {
@@ -818,6 +819,7 @@ function FmtExtList($pagename, $d, $args) {
 
     $conf = extHubGetConfig(['mode' => 'full', 'xname'=>$xname]);
     $compressed = (strncmp('phar://', $path, 7)===0)? '*' : '';
+    if($compressed) $compressed_count++;
 
     $select = "(:input form '{*\$PageUrl}' get class=hublistform:)";
     $select .= "(:input hidden n $pagename:)(:input hidden action hub:)";
@@ -840,6 +842,14 @@ function FmtExtList($pagename, $d, $args) {
 
     $out .= @"||'''$xname'''$compressed || $version || {$conf['xPriority']} "
       . @"|| {$conf['xAction']} || $select ||\n";
+  }
+  
+  if($compressed_count) {
+    $op = function_exists('opcache_get_status')
+      ? opcache_get_status(false) : [];
+    if(!($op['opcache_enabled']??false)) {
+      $out = "%p frame% $['''Note:''' OPcache is disabled. Compressed extensions may experience reduced performance.]\n\n$out";
+    }
   }
 
   return $out;
