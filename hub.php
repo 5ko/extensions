@@ -10,7 +10,7 @@
   See pmwiki.php for full details and lack of warranty.
 */
 
-$RecipeInfo['ExtensionHub']['Version'] = '2026-10-13';
+$RecipeInfo['ExtensionHub']['Version'] = '2026-11-15';
 SDVA($FmtPV, [
   '$ExtHubVersion'  => '$GLOBALS["RecipeInfo"]["ExtensionHub"]["Version"]',
   '$ExtPubDirUrl' => 'extFarmPubDirUrl()',
@@ -123,8 +123,8 @@ $[See Cookbook:Extensions to find new extensions.]
 TEMPLATE;
 
 SDVA($xHub['injectFmt'], [
-  'css' => "<link rel='stylesheet' href='%s' %s />\n",
-  'js' => "<script src='%s' %s></script>\n",
+  'css' => "<link class='pmext' rel='stylesheet' href='%s' %s />\n",
+  'js' => "<script class='pmext' src='%s' %s></script>\n",
 ]);
 
 SDVA($MarkupDirectiveFunctions, ['extlist'=>'FmtExtList']);
@@ -254,32 +254,29 @@ function extCaller() {
   return false;
 }
 
-function extAddWikiPlainDir($path = 'wikiplain.d') {
+function extAddWikiDir($path = 'wikiplain.d', $type = null) {
+  if(is_null($type)) $type = (stripos($path, 'plain')!==0)
+    ? 'plain' : 'lib';
   global $WikiLibDirs;
   $xname = extCaller();
   if(!$xname) return; # abort?
-  $active = extHubGetConfig('active');
+    $active = extHubGetConfig('active');
   $c = @$active[$xname];
   if(!$c) return;
   $dir = @$c['=dir'];
   if(!$dir) return;
-
   $path = "$dir/$path/{\$FullName}";
-  $WikiLibDirs[$path] = new HubPlainPageStore($path);
+  $WikiLibDirs[$path] = $type==='plain'
+    ? new HubPlainPageStore($path)
+    : new PageStore($path);
+}
+
+function extAddWikiPlainDir($path = 'wikiplain.d') {
+  return extAddWikiDir($path, 'plain');
 }
 
 function extAddWikiLibDir($path = 'wikilib.d') {
-  global $WikiLibDirs;
-  $xname = extCaller();
-  if(!$xname) return; # abort?
-  $active = extHubGetConfig('active');
-  $c = @$active[$xname];
-  if(!$c) return;
-  $dir = @$c['=dir'];
-  if(!$dir) return;
-
-  $path = "$dir/$path/\$FullName";
-  $WikiLibDirs[$path] = new PageStore($path);
+  return extAddWikiDir($path, 'lib');
 }
 
 function extAddHeaderResource($files, $attrs=[]) {
@@ -328,7 +325,7 @@ function extOutputResources() {
 function extFormatResource($xname, $a, $htmlattr) {
   global $xHub;
 
-  $active = extHubGetConfig('active');  
+  $active = extHubGetConfig('active');
   $out = '';
   if(is_array($a)) foreach($a as $v) 
     $out .= extFormatResource($xname, $v, $htmlattr);
